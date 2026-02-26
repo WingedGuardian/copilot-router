@@ -6,10 +6,10 @@ from typing import Any
 
 from loguru import logger
 
-# CostLogger is optional — pass None if not needed
-from copilot_router.failover import FailoverChain, ProviderTier
-from copilot_router.heuristics import RouteDecision
-from copilot_router.models import LLMProvider, LLMResponse
+from nanobot.copilot.cost.logger import CostLogger
+from nanobot.copilot.routing.failover import FailoverChain, ProviderTier
+from nanobot.copilot.routing.heuristics import RouteDecision
+from nanobot.providers.base import LLMProvider, LLMResponse
 
 # Instruction injected into the system prompt for models that can self-escalate.
 _ESCALATION_INSTRUCTION = (
@@ -281,6 +281,7 @@ class RouterProvider(LLMProvider):
 
             except RuntimeError as e:
                 logger.error(f"Escalation retry failed: {e}")
+                from nanobot.copilot.alerting.bus import get_alert_bus
                 await get_alert_bus().alert(
                     "routing", "high",
                     f"Escalation failed — both default and escalation models down: {e}",
@@ -303,6 +304,7 @@ class RouterProvider(LLMProvider):
 
         # Failover notification
         if tier.name.startswith(("safety:", "emergency:")):
+            from nanobot.copilot.alerting.bus import get_alert_bus
             await get_alert_bus().alert(
                 "routing", "medium",
                 f"Failover: routed via {tier.name} ({tier.model})",
@@ -340,7 +342,7 @@ class RouterProvider(LLMProvider):
                 self._strongest_model if decision.target == "strongest"
                 else self._escalation_model
             )
-            _find_by_model = None  # Removed: use model_provider_map instead
+            from nanobot.providers.registry import find_by_model as _find_by_model
             native_spec = _find_by_model(target_model)
             native_name = native_spec.name if native_spec else None
             if not native_spec:
@@ -367,7 +369,7 @@ class RouterProvider(LLMProvider):
                         ))
             else:
                 # No plan — try native provider first, then others as fallback
-                _find_by_model = None  # Removed: use model_provider_map instead
+                from nanobot.providers.registry import find_by_model as _find_by_model
                 native_spec = _find_by_model(self._default_model)
                 native_name = native_spec.name if native_spec else None
                 if not native_spec:
@@ -452,7 +454,7 @@ class RouterProvider(LLMProvider):
 
             # Probe LM Studio
             try:
-                lm_base = getattr(self._local, "api_base", "http://localhost:1234")
+                lm_base = getattr(self._local, "api_base", "http://192.168.50.100:1234")
                 url = f"{lm_base.rstrip('/').rstrip('/v1')}/v1/models"
                 loop = asyncio.get_event_loop()
                 await asyncio.wait_for(

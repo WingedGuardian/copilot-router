@@ -6,7 +6,7 @@ from typing import Any
 
 from loguru import logger
 
-from copilot_router.models import LLMProvider, LLMResponse
+from nanobot.providers.base import LLMProvider, LLMResponse
 
 
 def _fire_alert(message: str, provider_name: str = "") -> None:
@@ -15,8 +15,9 @@ def _fire_alert(message: str, provider_name: str = "") -> None:
 
     async def _send():
         try:
+            from nanobot.copilot.alerting.bus import get_alert_bus
             error_key = f"provider_failed:{provider_name}" if provider_name else "provider_failed"
-            logger.warning(f"Router alert: " + str(("llm", "medium", message, error_key,)))
+            await get_alert_bus().alert("llm", "medium", message, error_key)
         except Exception as e:
             logger.warning(f"Alert delivery failed: {e}")
 
@@ -32,7 +33,8 @@ def _resolve_provider_alert(provider_name: str) -> None:
 
     async def _resolve():
         try:
-            await logger.debug(f"Alert resolved: " + str(("llm", f"provider_failed:{provider_name}",)))
+            from nanobot.copilot.alerting.bus import get_alert_bus
+            await get_alert_bus().resolve("llm", f"provider_failed:{provider_name}")
         except Exception:
             pass
 
