@@ -86,6 +86,7 @@ class SimpleFailoverProvider(LLMProvider):
                         try:
                             await self.cost_logger.log_route(
                                 input_length=sum(len(str(m.get("content", ""))) for m in messages),
+                                has_images=False,
                                 routed_to=provider_name, provider=provider_name,
                                 model_used=use_model or provider.get_default_model(),
                                 route_reason="failover_attempt", success=False,
@@ -103,6 +104,7 @@ class SimpleFailoverProvider(LLMProvider):
                     try:
                         await self.cost_logger.log_route(
                             input_length=sum(len(str(m.get("content", ""))) for m in messages),
+                            has_images=False,
                             routed_to=provider_name, provider=provider_name,
                             model_used=self.last_model_used,
                             route_reason="failover" if errors else "primary",
@@ -122,6 +124,7 @@ class SimpleFailoverProvider(LLMProvider):
                     try:
                         await self.cost_logger.log_route(
                             input_length=sum(len(str(m.get("content", ""))) for m in messages),
+                             has_images=False,
                             routed_to=provider_name, provider=provider_name,
                             model_used=use_model or provider.get_default_model(),
                             route_reason="failover_attempt", success=False,
